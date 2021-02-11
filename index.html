@@ -76,9 +76,13 @@ FPS: 0
 var controls, camera, scene, renderer;
 
 var framesPerFps = 20; // higher = less often updated
-var mapsize = 4000;
-var terrainVerts = 64;
+var mapsize = 8000;
+var terrainVerts = 256;
 var perlinPeakMulti = 0.3;
+
+var trueRandomColors = 0;
+
+var camHeight = 1500; // normally 2500 etc.
 
 var showFps = 0; // top left corner html element.
 
@@ -95,10 +99,9 @@ var camFocusX = 0;
 var camFocusY = 0;
 var camFocusZ = 0;
 
-var camHeight = 1000; // normally 2500 etc.
 
 var flashColorFrame = 0;
-var flashFrameDiv = 1;
+var flashFrameDiv = 10;
 var flashIndex = 1     -1; // index of flashColors[]
 var flashColors = [
 	// 1:
@@ -240,8 +243,8 @@ function init(){
 		terrain.rotation.x = -Math.PI / 2;
 		
 
-		var peak = 8;
-		var smoothing = 600;
+		var peak = 5;
+		var smoothing = 800;
 		var vertices = terrain.geometry.attributes.position.array;
 		var perlin = new Perlin();
 		for(var i = 0; i <= vertices.length; i += 3){
@@ -356,11 +359,18 @@ function render() {
 	}
 
 
+
 	if((frameNumber % flashFrameDiv) == 0){
-		var color = flashColors[flashIndex][flashColorFrame % flashColors[flashIndex].length];
-		ambient.color.r = ((color >> 16) & 255) / 255;
-		ambient.color.g = ((color >> 8) & 255) / 255;
-		ambient.color.b = ((color) & 255) / 255;
+		if(trueRandomColors){
+			ambient.color.r = Math.random();
+			ambient.color.g = Math.random();
+			ambient.color.b = Math.random();
+		}else{
+			var color = flashColors[flashIndex][flashColorFrame % flashColors[flashIndex].length];
+			ambient.color.r = ((color >> 16) & 255) / 255;
+			ambient.color.g = ((color >> 8) & 255) / 255;
+			ambient.color.b = ((color) & 255) / 255;
+		}
 		flashColorFrame++;
 	}
 
@@ -371,15 +381,22 @@ function render() {
 		camera.lookAt(scene.position);
 		cameraCube.rotation.copy(camera.rotation);
 	}else{
+		camFocusX = Math.sin(frameNumber/60)*1500;
+		camFocusZ = Math.cos(frameNumber/60)*1500;
 		camera.position.x = camFocusX;
+		camera.position.z = camFocusZ;
 		
 		camera.position.y = camFocusY + camHeight+Math.sin(frameNumber/20)*400; // set cam higher from ground.
 		
 		if(camera.position.y < 100){
 			camera.position.y = 100;
 		}
-		camera.position.z = camFocusZ+23;
-		camera.lookAt(camFocusX, camFocusY, camFocusZ);
+
+		camera.lookAt(
+			camFocusX, 
+			camFocusY, 
+			camFocusZ
+		);
 	}
 	
 	renderer.render(scene, camera);
@@ -396,10 +413,11 @@ function onDocumentKeyDown(event) {
 	if(keyCode == 17){ // ctrl.
 		comboButtonDown = true;
 	}
-	if(keyCode >= 49 && keyCode <= 57){ // 1-9 numbers
+	if(keyCode >= 48 && keyCode <= 57){ // 1-9 numbers
 		var val = keyCode-48; // value 1-9
 		if(comboButtonDown){
 			flashIndex = val-1; // value 0-8 for array indexes.
+			if(flashIndex < 0) flashIndex = 0;
 			if(flashIndex > flashColors.length-1){
 				flashIndex = flashColors.length-1;
 			}
