@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Noise generator</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=1.0, initial-scale=1.0, maximum-scale=3.0">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black">
+	<meta property="og:title" content="Noise generator">
+	<meta property="og:description" content="Noise generator">
+	<meta property="og:image" content="noisegen.jpg">
+</head>
+
+<body>
+
+<style>
+
+body {
+	padding:0;
+	margin:0;
+	background-color:black;
+}
+
+.canvas {
+	width:100%;
+	height:100%;
+	padding:0;
+	margin:0;
+	
+	background-color:transparent;
+	opacity:1;
+	position:absolute;
+	left:0;
+	top:0;
+}
+</style>
+
+
+
+<script>
+// jquery ready function:
+var ready=function(){function g(){if(!a.isReady){try{document.documentElement.doScroll("left")}catch(b){setTimeout(g,1);return}a.ready()}}var d,c,n={"[object Boolean]":"boolean","[object Number]":"number","[object String]":"string","[object Function]":"function","[object Array]":"array","[object Date]":"date","[object RegExp]":"regexp","[object Object]":"object"},a={isReady:!1,readyWait:1,holdReady:function(b){b?a.readyWait++:a.ready(!0)},ready:function(b){if(!0===b&&!--a.readyWait||!0!==b&&!a.isReady){if(!document.body)return setTimeout(a.ready,
+1);a.isReady=!0;!0!==b&&0<--a.readyWait||d.resolveWith(document,[a])}},bindReady:function(){if(!d){d=a._Deferred();if("complete"===document.readyState)return setTimeout(a.ready,1);if(document.addEventListener)document.addEventListener("DOMContentLoaded",c,!1),window.addEventListener("load",a.ready,!1);else if(document.attachEvent){document.attachEvent("onreadystatechange",c);window.attachEvent("onload",a.ready);var b=!1;try{b=null==window.frameElement}catch(e){}document.documentElement.doScroll&&
+b&&g()}}},_Deferred:function(){var b=[],e,c,d,h={done:function(){if(!d){var c=arguments,f;if(e){var k=e;e=0}var l=0;for(f=c.length;l<f;l++){var m=c[l];var g=a.type(m);"array"===g?h.done.apply(h,m):"function"===g&&b.push(m)}k&&h.resolveWith(k[0],k[1])}return this},resolveWith:function(a,f){if(!d&&!e&&!c){f=f||[];c=1;try{for(;b[0];)b.shift().apply(a,f)}finally{e=[a,f],c=0}}return this},resolve:function(){h.resolveWith(this,arguments);return this},isResolved:function(){return!(!c&&!e)},cancel:function(){d=
+1;b=[];return this}};return h},type:function(a){return null==a?String(a):n[Object.prototype.toString.call(a)]||"object"}};document.addEventListener?c=function(){document.removeEventListener("DOMContentLoaded",c,!1);a.ready()}:document.attachEvent&&(c=function(){"complete"===document.readyState&&(document.detachEvent("onreadystatechange",c),a.ready())});return function(b){a.bindReady();a.type(b);d.done(b)}}();
+
+function xor128(min, max){
+	if(typeof xor128.x == 'undefined'){
+		// generate new seed from date and microseconds:
+		var date = new Date();
+		var t1a = window.performance.now()*1000;
+		var t2a = window.performance.now()*10000;
+		var t3a = window.performance.now()*100000;
+		var t1 = (Math.floor((t1a-Math.floor(t1a))*4100000000) >>> 0) & 0xFFFFFFFF;
+		var t2 = (Math.floor((t2a-Math.floor(t2a))*5300000000) >>> 0) & 0xFFFFFFFF;
+		var t3 = (Math.floor((t3a-Math.floor(t3a))*6700000000) >>> 0) & 0xFFFFFFFF;
+		var t4 = ((date.getTime()-1430000000000) >>> 0) & 0xFFFFFFFF;
+		xor128.x = t1;
+		xor128.y = t2;
+		xor128.z = t3;
+		xor128.w = t4;
+		xor128.t = 0 >>> 0; // >>> forces into unsigned value.
+	}
+	xor128.t = xor128.x ^ (xor128.x << 11);
+	xor128.x = xor128.y;
+	xor128.y = xor128.z;
+	xor128.z = xor128.w;
+	xor128.w = (xor128.w ^ (xor128.w >>> 19)) ^ (xor128.t ^ (xor128.t >>> 8));
+	var val = (xor128.w >>> 0) / (0xFFFFFFFF >>> 0);
+	if(typeof min == 'undefined' && typeof max == 'undefined'){
+		return val;
+	}else{
+		return ((max-min)*val)+min;
+	}
+}
+
+
+// set device CSS pixel size to physical pixel size:
+{
+	let w = document.documentElement.clientWidth * window.devicePixelRatio;
+	viewport = document.querySelector("meta[name=viewport]");
+	viewport.setAttribute('content', 'width=' + w);
+
+	document.documentElement.style.transform = 'scale( 1 / window.devicePixelRatio )';
+	document.documentElement.style.transformOrigin = 'top left';
+}
+
+
+let width = window.innerWidth/2;
+let height = window.innerHeight/2;
+
+let palet_index = 4;
+let palets = [
+	[0xFF0000, 0xFFFF00, 0x00FF00, 0x00FFFF, 0x0000FF, 0xFF00FF],
+	[0xFF0000, 0x00FF00, 0x0000FF],
+	[0x000000, 0x880000, 0xFF0000, 0xFF8800], // siisti hohtavat kirkkaan turkoosin sävyjen saarekkeet
+	[0x000000, 0x000000, 0x000000, 0x000000, 0x000000,0x000000, 0x000000, 0xFF0000, 0xFF0000, 0xFF8800, 0x880000, 0x880000, 0xFF0000, 0xFF8800, 0x00FFFF, 0xFFFFFF], // kultakimpaleet sinisessä meressä.
+	[0x0088FF,0x44AAFF, 0x0088FF, 0x0088FF, 0x00EEFF, 0x00EEFF, 0x0000FF, 0x0000FF, 0x0000FF],
+];
+
+
+
+function changeOffset(){
+	/*
+	var canvas = document.getElementById("drawing");
+	let offx = Math.floor((window.innerWidth/2)-(width/2));
+	let offy = Math.floor((window.innerHeight/2)-(height/2));
+	canvas.style.left = offx+"px";
+	canvas.style.top = offy+"px";
+	console.log("offset changed");
+	*/
+}
+window.addEventListener('resize', function(event){
+	changeOffset();
+});
+
+function getTimeMillis(){
+	var d = new Date();
+	return d.getTime();
+}
+
+ready(function(){
+
+	var canvas = document.getElementById("drawing");
+	canvas.width = width;
+	canvas.height = height;
+	canvas.style.opacity = "1";
+
+	var canvas2 = document.getElementById("drawing2");
+	canvas2.width = Math.round(width/2);
+	canvas2.height = Math.round(height/2);
+	canvas2.style.opacity = "0.4";
+	
+	var canvas3 = document.getElementById("drawing3");
+	canvas3.width = Math.round(width/4);
+	canvas3.height = Math.round(height/4);
+	canvas3.style.opacity = "0.3";
+	
+	var canvas4 = document.getElementById("drawing4");
+	canvas4.width = Math.round(width/8);
+	canvas4.height = Math.round(height/8);
+	canvas4.style.opacity = "0.3";
+	
+	var canvas5 = document.getElementById("drawing5");
+	canvas5.width = Math.round(width/16);
+	canvas5.height = Math.round(height/16);
+	canvas5.style.opacity = "0.2";
+	
+	var canvas6 = document.getElementById("drawing6");
+	canvas6.width = Math.round(width/32);
+	canvas6.height = Math.round(height/32);
+	canvas6.style.opacity = "0.2";
+	
+	var canvas7 = document.getElementById("drawing7");
+	canvas7.width = Math.round(width/64);
+	canvas7.height = Math.round(height/64);
+	canvas7.style.opacity = "0.1";
+	
+	var canvas8 = document.getElementById("drawing8");
+	canvas8.width = Math.round(width/128);
+	canvas8.height = Math.round(height/128);
+	canvas8.style.opacity = "0.1";
+	
+	var canvas9 = document.getElementById("drawing9");
+	canvas9.width = Math.round(width/256);
+	canvas9.height = Math.round(height/256);
+	canvas9.style.opacity = "0.1";
+
+	var ctx1 = drawing.getContext("2d", {alpha: true});       // context without alpha channel.
+	var idata1 = ctx1.createImageData(width, height); // create image data
+	var buffer1 = new Uint32Array(idata1.data.buffer);  // get 32-bit view
+	
+	var ctx2 = drawing2.getContext("2d", {alpha: true});
+	var idata2 = ctx2.createImageData(Math.round(width/2), Math.round(height/2));
+	var buffer2 = new Uint32Array(idata2.data.buffer);
+
+	var ctx3 = drawing3.getContext("2d", {alpha: true});
+	var idata3 = ctx3.createImageData(Math.round(width/4), Math.round(height/4));
+	var buffer3 = new Uint32Array(idata3.data.buffer);
+	
+	var ctx4 = drawing4.getContext("2d", {alpha: true});
+	var idata4 = ctx4.createImageData(Math.round(width/8), Math.round(height/8));
+	var buffer4 = new Uint32Array(idata4.data.buffer);
+
+	var ctx5 = drawing5.getContext("2d", {alpha: true});
+	var idata5 = ctx5.createImageData(Math.round(width/16), Math.round(height/16));
+	var buffer5 = new Uint32Array(idata5.data.buffer);
+
+	var ctx6 = drawing6.getContext("2d", {alpha: true});
+	var idata6 = ctx6.createImageData(Math.round(width/32), Math.round(height/32));
+	var buffer6 = new Uint32Array(idata6.data.buffer);
+
+	var ctx7 = drawing7.getContext("2d", {alpha: true});
+	var idata7 = ctx7.createImageData(Math.round(width/64), Math.round(height/64));
+	var buffer7 = new Uint32Array(idata7.data.buffer);
+	
+	var ctx8 = drawing8.getContext("2d", {alpha: true});
+	var idata8 = ctx8.createImageData(Math.round(width/128), Math.round(height/128));
+	var buffer8 = new Uint32Array(idata8.data.buffer);
+
+	var ctx9 = drawing9.getContext("2d", {alpha: true});
+	var idata9 = ctx9.createImageData(Math.round(width/256), Math.round(height/256));
+	var buffer9 = new Uint32Array(idata9.data.buffer);
+
+
+	(function loop(){
+		noise(ctx1, buffer1, idata1);
+		noise(ctx2, buffer2, idata2, 0.9);
+		noise(ctx3, buffer3, idata3, 0.7);
+		noise(ctx4, buffer4, idata4, 0.5);
+		noise(ctx5, buffer5, idata5, 0.3);
+		noise(ctx6, buffer6, idata6, 0.2);
+		noise(ctx7, buffer7, idata7, 0.1);
+		noise(ctx8, buffer8, idata8, 0.1);
+		noise(ctx9, buffer9, idata9, 0.1);
+		requestAnimationFrame(loop);
+	})()
+
+	var total_loops = 0;
+	var total_looptime = 0;
+	
+	
+	function noise(ctx, buffer, idata, lenmulti = 1){
+	
+		var len = buffer.length;
+		var hlen = Math.floor((len*lenmulti)/4);
+
+		
+		//let looptimestart = getTimeMillis();
+		
+		/*
+		let s1 = 0;
+		let l1 = hlen;
+		
+		let s2 = hlen;
+		let l2 = hlen;
+		
+		let s3 = hlen*2;
+		let l3 = hlen;
+		
+		let s4 = hlen*3;
+		let l4 = hlen;
+		
+		let s5 = hlen*4;
+		let l5 = len-s5;
+		
+	
+		for(let i = 0; i < hlen; i++){
+			let rgb = Math.floor(Math.random()*0xFFFFFF);
+			buffer[i+s1] = 0xFF000000 | rgb;
+			buffer[i+s2] = 0xFF000000 | rgb;
+			buffer[i+s3] = 0xFF000000 | rgb;
+			buffer[i+s4] = 0xFF000000 | rgb;
+			buffer[i+s5] = 0xFF000000 | rgb;
+		}
+		*/
+		
+		// RGB palet:
+		for(let i = 0; i < hlen; i++){
+			let rgb = palets[palet_index][Math.floor(Math.random()*palets[palet_index].length)];
+			let index = Math.floor(Math.random()*len);
+			buffer[index] = 0xFF000000 | rgb;
+		}
+		
+		/*
+		// RGB:
+		for(let i = 0; i < hlen; i++){
+			let rgb = Math.floor(Math.random()*0xFFFFFF);
+			let index = Math.floor(Math.random()*len);
+			buffer[index] = 0xFF000000 | rgb;
+		}
+*/
+
+		/*
+		// GRAY:
+		for(let i = 0; i < hlen; i++){
+			let v = Math.floor(Math.random()*255);
+			let rgb = (v << 16) | (v << 8) | v;
+			let index = Math.floor(Math.random()*len);
+			buffer[index] = 0xFF000000 | rgb;
+		}
+		*/
+		/*
+		
+		let looptime = getTimeMillis()-looptimestart;
+		total_loops++;
+		total_looptime += looptime;
+		
+		if(total_loops > 100){
+			let average_speed = total_looptime/total_loops;
+			console.log("average_speed = "+average_speed+" ms per frame");
+			total_looptime = 0;
+			total_loops = 0;
+		}
+		
+		*/
+		ctx.putImageData(idata, 0, 0);
+	}
+	
+	
+	function noise2(ctx){
+		var len = buffer.length - 1;
+		//let looptimestart = getTimeMillis();
+		while(len--){
+		/*
+			var r = Math.round((Math.random())*255);
+			var g = Math.round((Math.random())*255);
+			var b = Math.round((Math.random())*255);
+			buffer[len] = 0xFF000000 | (b << 16) | (g << 8) | r;
+			*/
+			buffer[len] = xor128(0xFF000000,0xFFFFFFFF); // 2.87 per frame
+		}
+		/*
+		let looptime = getTimeMillis()-looptimestart;
+		total_loops++;
+		total_looptime += looptime;
+		
+		if(total_loops > 100){
+			let average_speed = total_looptime/total_loops;
+			console.log("average_speed = "+average_speed+" ms per frame");
+			total_looptime = 0;
+			total_loops = 0;
+		}
+		*/
+		ctx.putImageData(idata, 0, 0);
+	}
+
+});
+</script>
+
+
+<canvas id="drawing" class="canvas" width="640" height="320"></canvas>
+<canvas id="drawing2" class="canvas" width="640" height="320"></canvas>
+<canvas id="drawing3" class="canvas" width="640" height="320"></canvas>
+<canvas id="drawing4" class="canvas" width="640" height="320"></canvas>
+<canvas id="drawing5" class="canvas" width="640" height="320"></canvas>
+<canvas id="drawing6" class="canvas" width="640" height="320"></canvas>
+<canvas id="drawing7" class="canvas" width="640" height="320"></canvas>
+<canvas id="drawing8" class="canvas" width="640" height="320"></canvas>
+<canvas id="drawing9" class="canvas" width="640" height="320"></canvas>
+
+
+</body>
+</html>
